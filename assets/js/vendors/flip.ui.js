@@ -22,7 +22,7 @@ window.ui = {
 			ui.resize();
 		}
 		ui.resize();
-		
+
 		setTimeout(function() {
 			$('#firstBoard').addClass('show');
 			ui.events.trigger('uiloaded');

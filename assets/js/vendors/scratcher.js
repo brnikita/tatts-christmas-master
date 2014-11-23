@@ -24,9 +24,9 @@ var buildScratcher = function(element, image, scratchSize, showElemOnScratch, ca
   console.log(elemHash, element, image);
 
   if($('head').find('#css'+elemHash).length == 0)
-    $('head').append('<style id="css'+elemHash+'"> @font-face { font-family: "BasicScratch"; src: url("assets/js/BasicScratch.ttf"); } '+element+' { position: absolute; top: 0px; left: 50%; margin-left: -'+(pW/2)+'px; width: '+pW+'px; height: '+pH+'px; z-index: 99; }</style>');
+    $('head').append('<style id="css'+elemHash+'"> @font-face { font-family: "BasicScratch"; src: url("assets/fonts/BasicScratch.ttf"); } '+element+' { position: absolute; top: 0px; left: 50%; margin-left: -'+(pW/2)+'px; width: '+pW+'px; height: '+pH+'px; z-index: 99; }</style>');
   
-  var temp = new Image().src = 'assets/js/BasicScratch.ttf';
+  var temp = new Image().src = 'assets/fonts/BasicScratch.ttf';
   
   canvas.attr('height', pH).attr('width', pW);
   
@@ -65,7 +65,7 @@ var buildScratcher = function(element, image, scratchSize, showElemOnScratch, ca
 
     scratchTrack.offset = canvas.offset();
     $('#css'+elemHash).remove();
-    $('head').append('<style id="css'+elemHash+'"> @font-face { font-family: "BasicScratch"; src: url("assets/js/scratcher/BasicScratch.ttf"); } '+element+' { position: absolute; top: 0px; left: 50%; margin-left: -'+(pW/2)+'px; width: '+pW+'px; height: '+pH+'px; z-index: 99; }</style>');
+    $('head').append('<style id="css'+elemHash+'"> @font-face { font-family: "BasicScratch"; src: url("assets/fonts/BasicScratch.ttf"); } '+element+' { position: absolute; top: 0px; left: 50%; margin-left: -'+(pW/2)+'px; width: '+pW+'px; height: '+pH+'px; z-index: 99; }</style>');
   });
 
   canvas.attr('data-scratch-count', 0);
