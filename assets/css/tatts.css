@@ -1,0 +1,211 @@
+body {
+	font-family: 'HelveticaNeueLT', Arial, Helvetica, sans-serif;
+	color: white;
+	background-color: #00afec;
+}
+.innerSwap {
+	background-image: url(../images/main-background.png);
+	background-size: cover;
+	background-position: center;
+}
+
+#preload {
+	position: absolute;
+	top: -10px;
+	left: -10px;
+	width: 2px;
+	height: 2px;
+	overflow: hidden;
+}
+#preload * {
+	position: absolute;
+	top: 0px;
+	left: 0px;
+}
+.darken {
+	background-color: #002d62;
+	opacity: 0.8;
+}
+
+.how-to-play-box {
+	border: 5px solid #064287;
+	box-shadow: 4px 4px 10px 0px rgba(0,0,0,0.35);
+}
+
+.text-shadow {
+	text-shadow: 0px 3px 2px rgba(0, 0, 0, 0.6);
+}
+
+.gold-text {
+	color: #ffee56;
+}
+.white-text {
+	color: white;
+}
+.friz {
+	font-family: 'Friz';
+	text-shadow: 0px 5px 0px rgba(0, 0, 0, 0.9);
+}
+.allwrap {
+	border: 10px solid #00afec;
+}
+
+p {
+	line-height: 96%;
+}
+
+input,select {
+	width: calc(100% - 21%);
+	height: 100%;
+	position: absolute;
+	right:0;
+	top:0;
+	outline: none;
+	background-color: transparent;
+	border: 0px;
+	font-family: HelveticaNeueLT;
+	color: #0c1f39;
+}
+
+input[type="checkbox"]:checked:after {
+	content:'\2713';
+	position: absolute;
+	top:0;
+	left:0;
+	width: 100%;
+	height: 100%;
+	font-size: 50px;
+}
+
+select {
+	background-image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZlcnNpb249IjEuMSIgeD0iMTJweCIgeT0iMHB4IiB3aWR0aD0iMjRweCIgaGVpZ2h0PSIzcHgiIHZpZXdCb3g9IjAgMCA2IDMiIGVuYWJsZS1iYWNrZ3JvdW5kPSJuZXcgMCAwIDYgMyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+PHBvbHlnb24gcG9pbnRzPSI1Ljk5MiwwIDIuOTkyLDMgLTAuMDA4LDAgIi8+PC9zdmc+);
+  background-position: 100% center;
+  background-size: 30%;
+  background-repeat: no-repeat;
+}
+
+.inputWrap {
+	background-image: url(../images/input-middle.png);
+	border-radius: 20px;
+	border-right: 6px solid #00abed;
+	background-size: auto 100%;
+	border-left: 6px solid #00abed;
+}
+
+.inputWrap p {
+	padding: 3% 10px;
+	margin-right: 10px;
+	border-right: 1px solid #057eb7;
+}
+
+hr {
+	border: 1px solid #ffee56;
+}
+
+#boardImage {
+	width: 100%;
+
+}
+#boardImage:after {
+    padding-top: 130.30612244897959%; /*980:1277; ratio*/
+    display: block;
+    content: '';
+}
+
+#boardImage img.playImage {
+	width: 100%;
+	/*transition: 700ms;*/
+	position: absolute;
+	transform: scale(1) translateX(0.00001%) translateY(0.00001%) translateZ(1px);
+	-webkit-transform: scale(1) translateX(0.00001%) translateY(0.00001%) translateZ(1px);
+}
+
+#boardImage.zoomed .gameClick {
+	display: none;
+	pointer-events: none;
+	transition: 500ms;
+}
+
+.gameClick {
+	/*background-color: yellow;*/
+	background-image: url(../images/panels/Panel_1.svg);
+	background-size: 100% 100%;
+	/*opacity: 0.3;*/
+	-webkit-transform: translateZ(2px);
+	transform: translateZ(2px);
+}
+
+.gameClick.hide {
+	opacity: 0;
+	pointer-events: none;
+}
+
+a {
+	color: white;
+}
+
+#scratchBox, .done-button {
+	opacity: 0;
+	pointer-events: none;
+	transition: 500ms;
+/*	-webkit-transform: translateZ(2px);
+	transform: translateZ(2px);*/
+}
+
+#boardImage.zoomed #scratchBox, #boardImage.zoomed .done-button {
+	opacity: 1;
+	pointer-events: all;
+}
+
+#scratchRevealer {
+	width: 100%;
+	height: 100%;
+	position: absolute;
+	background-color: white;
+	background-size: 100% 100%;
+	display: none;
+	border: 5px solid black;
+}
+
+
+.how-to-play-box .rotator {
+		position: relative;
+		width: 100% !important;
+		height: 100% !important;
+	}
+	.how-to-play-box .rotator > *:first-child {
+		display: block;
+	}
+	.how-to-play-box .rotator > * {
+		display: none;
+		width: 100% !important;
+		height: 100% !important;
+	}
+	.how-to-play-box img.hand {
+		width: 18.46%  !important;
+		height: auto !important;
+		left: -10%;
+		bottom: -7%;
+		position: absolute;
+		opacity: 0;
+	}
+	.how-to-play-box .instructions-scratch {
+		background: url(../images/instructions-bg.png) 0 0 no-repeat;
+		background-size: cover;
+	}
+	.how-to-play-box .instructions-scratch > * {
+		width: 37.4%;
+		height: 63.362%;
+		position: absolute;
+		top: 17.24%;
+	}
+	.how-to-play-box .instructions-scratch > .left {
+		left: 10%;
+	}
+	.how-to-play-box .instructions-scratch > .right {
+		right: 10%;
+	}
+	
+.slide-text-container .slide-text {
+	display: none;
+}

@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta id="viewport" name="viewport" content="width=980, maximum-scale=1, user-scalable=no" id="viewport" />
+	<title>Christmas Countdown</title>
+	<script type="text/javascript" src="config.js"></script>
+	<script type="text/javascript" src="assets/js/jquery.js"></script>
+	<script type="text/javascript" src="assets/js/velocity.js"></script>
+	<script type="text/javascript" src="assets/js/flip.ui.js"></script>
+	<script type="text/javascript" src="assets/js/scratcher.js"></script>
+	<script type="text/javascript" src="assets/js/jquery.cycle.all.js"></script>
+
+	<link rel="stylesheet" href="assets/css/flip.ui.css">
+	<link rel="stylesheet" href="assets/fonts/font.css">
+	<link rel="stylesheet" href="assets/css/tatts.css">
+
+	<script type="text/javascript">
+
+	//localStorage.removeItem('_playerObject_');
+
+	var f = { x:0, y:0, }
+	var playerObject = {
+		title: 'Mr.',
+		fname: '',
+		lname: '',
+		email: '',
+		mobile: '',
+		age: 0,
+		postcode: '',
+		sys: '',
+		dob_day: '01',
+		dob_month: '01',
+		dob_year: 1981,
+		password: ''
+	};
+	var gameType = null;
+	var plays_remain;
+	if(localStorage.getItem('_playerObject_') !== null)
+		playerObject = JSON.parse(localStorage.getItem('_playerObject_'));
+	
+	playerObject.sys = '';
+	playerObject.password = '';
+	
+	ui.events.on('uiloaded', function() {
+
+		IntroAnimation();
+
+		$.get('termsNSW.html', function(d){
+			$('#termsNSW').html(d);
+		});
+		$.get('termsQLD.html', function(d){
+			$('#termsQLD').html(d);
+		});
+
+		$boardImage = $('#boardImage img.playImage');
+
+				$('.gameClick').on('mouseup', function() {
+			console.log('clicked panel');
+
+			if($(this).attr('data-revealed')!='false') {
+				console.log('blocked');
+				return true;
+			}
+
+			var zoomto = $(this).attr('data-zoom').split(',');
+			var game = $(this).attr('data-game').split(',');
+
+			f = {
+				x:parseFloat(zoomto[0]),
+				y:parseFloat(zoomto[1]),
+			}
+			console.log(f);
+			$('.gameClick').addClass('hide');
+			
+			// console.log('start zoom animation');
+			ui.blockPointer(200);
+
+			$boardImage.velocity({
+				scale: [7.5, 1],
+				translateZ: [1, 1],
+				translateX: [zoomto[0]+'%', '0%'],
+				translateY: [zoomto[1]+'%', '0%'],
+			}, {duration: 700,  mobileHA: false, complete: function(){
+				$('#scratcher1').removeClass('no-event');
+					// console.log('complete animation');
+					// $boardImage.css({'transform':'translateX('+zoomto[0]+'%) translateY('+zoomto[1]+'%) scale(7.5)' });
+					// console.log({'transform':'translateX('+zoomto[0]+'%) translateY('+zoomto[1]+'%) scale(7.5)' });
+			 		$('#boardImage').addClass('zoomed');
+				}
+			});
+
+			// console.log('Build scratch Panel');
+			buildScratcher('#scratcher1', 'assets/images/panels/Panel_'+game+'.svg', '200', '#scratchRevealer',
+				function() {
+					$('#scratchRevealer').css({'background-image': 'none'});
+					$.post(config.api.scratch, { panel: game, gametype: gameType, playerObject: playerObject, screenid: ui.currentBoard }, function(data) {
+						if(data.message !== null) alert(data.message);
+						plays_remain = data.plays_remain;
+						$('.plays_remain').text(plays_remain);
+						$('#scratchDone').removeAttr('data-board-swap').attr('data-event', 'unzoomBoard');
+						if(data.game_state === true) {
+							$('#scratchDone').attr('data-board-swap', '#winBoard');
+						}
+						if((data.game_state === false)&&(parseInt(plays_remain)===0)) {
+							$('#scratchDone').attr('data-board-swap', '#lossBoard');
+						}
+						if((data.game_state === false)&&(parseInt(plays_remain)!==0)) {
+							$('#tryAgain').find('[data-event="enterGame"]').attr('data-playfor', gameType);
+							$('#scratchDone').attr('data-board-swap', '#tryAgain');
+						}
+
+						$('#scratchRevealer').css({'background-image': 'url('+data.reveal+')'});
+						$('.gameClick[data-game="'+game+'"]')
+							.css({'background-image': 'url('+data.reveal+')'})
+							.attr('data-revealed', 'true');
+					}, 'json');
+				}
+			);
+		});
+
+		$('input,select').on('change', function(){
+			var p = $(this).attr('name');
+			var v = $(this).val();
+			playerObject[p] = v;
+			try {
+        localStorage.setItem('_playerObject_', JSON.stringify(playerObject));
+      } catch (error) {}
+			
+			checkValid();
+		});
+
+		checkValid();
+
+	});
+		
+		
+
+		// set fields from player playerObject
+
+
+
+
+		// event binding for game panel
+
+		ui.events.on('enterGame', function(e, ret) {
+			$('#scratchDone').removeAttr('data-board-swap');
+			
+			console.log('entering game');
+
+			ui.showLoad(true);
+			setTimeout(function(){
+				buildScratcher('#scratcher1', 'assets/images/panels/Panel_1.png', '200', '#scratchRevealer', function(){});
+			}, 400);
+
+			gameType = $(ret.element).attr('data-playfor');
+			
+			$.post(config.api.gameboard, { playerObject: playerObject, gametype: gameType, screenid: ui.currentBoard }, function(gamedata) {
+				if(gamedata.message !== null) {
+					alert(gamedata.message);
+					return false;
+				}
+				ui.swapBoard('#game-board');
+				var panels = gamedata.panels;
+				$('#gametitle').text(gamedata.gametitle);
+				for(n in panels) {
+					$('.gameClick[data-game="'+panels[n].panel_number+'"]')
+						.css({'background-image': 'url('+panels[n].image+')'})
+						.attr('data-revealed', panels[n].isRevealed);
+				}
+			}, 'json').always(function(e,s,d){
+				console.log(d);
+				ui.showLoad(false);
+			});
+		});
+
+		ui.events.on('tattsJoin', function(e, elem) {
+			$.post(config.api.register, { playerObject: playerObject, screenid: ui.currentBoard }, function(join) {
+				if(join.registered == true) {
+					ui.swapBoard('#member-play');
+				}else{
+					alert(join.message);
+				}
+			}, 'json');
+		});
+
+		ui.events.on('claimWin', function(e, elem) {
+			$.post(config.api.claim, { playerObject: playerObject, screenid: ui.currentBoard, gametype: gameType }, function(claim) {
+				if(claim.message !== null) alert(claim.message);
+				if(claim.claim == true) {
+					alert('You will now receive an email with instructions on how to complete your prize claim.');
+					ui.swapBoard('#firstBoard');
+				}
+			}, 'json');
+		});
+
+		ui.events.on('memberLogin', function(e, elem) {
+			$.post(config.api.member_auth, { playerObject: playerObject, screenid: ui.currentBoard }, function(auth) {
+				console.log(auth);
+				if(auth.auth == true) {
+					ui.swapBoard('#member-play');
+				}else{
+					alert('Member not found');
+				}
+			}, 'json');
+		});
+
+		ui.events.on('unzoomBoard', function(){
+			$('#boardImage').removeClass('zoomed');
+			$('#scratcher1').addClass('no-event');
+			$boardImage.velocity({
+				translateZ: 1,
+				translateX: '0.00001%',
+				translateY: '0.00001%',
+				scale: [1, 7.5],
+			}, {duration: 700, complete: function(){
+				$('.gameClick').removeClass('hide');
+			}});
+		});
+
+		ui.events.on('termsNSW', function(e, elem){
+			$('#termsNSW').hide();
+			$('#termsQLD').hide();
+			$('#termsNSW').show(); //here
+
+			$('.terms-swap').removeClass('gold-text');
+			$(elem.element).addClass('gold-text');
+		});
+
+		ui.events.on('termsQLD', function(e, elem){
+			$('#termsNSW').hide();
+			$('#termsQLD').hide();
+			$('#termsQLD').show(); //here
+
+			$('.terms-swap').removeClass('gold-text');
+			$(elem.element).addClass('gold-text');
+		});
+
+		
+
+
+	function checkValid() {
+
+		for(p in playerObject) {
+			$('[name="'+p+'"]').val(playerObject[p]);
+		}
+
+		$('[data-valid]').each(function(){
+			var check = $(this).attr('data-valid').split(',');
+			var ret = true;
+			for(v in check) {
+				if(check[v] == 'email') {
+					if(playerObject.email.indexOf('@')<0)
+						ret = false;
+				}
+				if(check[v] == 'fname') {
+					if(playerObject.fname.length<1)
+						ret = false;
+				}
+				if(check[v] == 'password') {
+					if(playerObject.password.length<1)
+						ret = false;
+				}
+				if(check[v] == 'lname') {
+					if(playerObject.lname.length<1)
+						ret = false;
+				}
+				if(check[v] == 'mobile') {
+  				if(!playerObject.mobile.match(/^\d{10}$/))
+						ret = false;
+				}
+				if(check[v] == 'postcode') {
+  				if(parseInt(playerObject.postcode).toString().length<3)
+						ret = false;
+				}
+				if(check[v] == 'sys') {
+  				if(playerObject.sys.length!=10)
+						ret = false;
+				}
+			}
+			if(!ret) {
+				$(this).addClass('disabled');
+			}else{
+				$(this).removeClass('disabled');
+			}
+		});
+	}
+	
+	function IntroAnimation() {
+		//init intro animation
+		$('#firstBoard .how-to-play-box .rotator').cycle({
+			fx: 'scrollHorz',
+			timeoutFn: function(currSlideElement, nextSlideElement, options, forwardFlag) {
+				if (options.currSlide == 4) {
+					return 5500;
+				} else {
+					return 3000;
+				}
+			},
+			before: function(currSlideElement, nextSlideElement, options, forwardFlag) {
+				if ($('.slide-text:visible').length == 0) {
+					$('.slide-text').eq(0).fadeIn();
+				} else {
+					var nextSlide = options.nextSlide;
+					$('.slide-text:visible').stop().fadeOut(function() {
+						$('.slide-text').eq(nextSlide).fadeIn();
+					});
+				}
+				if (options.nextSlide == 4) {
+					$('.how-to-play-box .hand').css({
+						left: '-5%',
+						bottom: '-19%',
+						opacity: 0
+					});
+					$('.how-to-play-box .left, .how-to-play-box .right').css({opacity: 1});
+				}
+			},
+			after: function(currSlideElement, nextSlideElement, options, forwardFlag) {
+				if (options.currSlide == 4) {
+					//hand movement
+					setTimeout(function() { $('.how-to-play-box .hand').animate({opacity: 1, left: '+=15%', bottom: '+=12%'}, 400); }, 0);
+					setTimeout(function() { $('.how-to-play-box .hand').animate({left: '+=15%', bottom: '+=25%'}, 400); }, 400);
+					setTimeout(function() { $('.how-to-play-box .hand').animate({left: '-=4%', bottom: '-=25%'}, 400); }, 800);
+					setTimeout(function() { $('.how-to-play-box .hand').animate({left: '+=15%', bottom: '+=25%'}, 400); }, 1200);
+					setTimeout(function() { $('.how-to-play-box .hand').animate({left: '-=4%', bottom: '-=25%'}, 400); }, 1600);
+					setTimeout(function() { $('.how-to-play-box .hand').animate({left: '+=21%'}, 600); }, 2000);
+					setTimeout(function() { $('.how-to-play-box .hand').animate({left: '+=15%', bottom: '+=25%'}, 400); }, 2600);
+					setTimeout(function() { $('.how-to-play-box .hand').animate({left: '-=4%', bottom: '-=25%'}, 400); }, 3000);
+					setTimeout(function() { $('.how-to-play-box .hand').animate({left: '+=15%', bottom: '+=25%'}, 400); }, 3400);
+					setTimeout(function() { $('.how-to-play-box .hand').animate({left: '-=4%', bottom: '-=25%'}, 400); }, 3800);
+					setTimeout(function() { $('.how-to-play-box .hand').animate({opacity: 0, left: '+=13%', bottom: '-=12%'}, 400); }, 4400);
+					
+					//scratch off boxes
+					setTimeout(function() { $('.how-to-play-box .left1').animate({opacity: 0}, 400); }, 500);
+					setTimeout(function() { $('.how-to-play-box .left2').animate({opacity: 0}, 400); }, 1000);
+					setTimeout(function() { $('.how-to-play-box .left3').animate({opacity: 0}, 400); }, 1600);
+					setTimeout(function() { $('.how-to-play-box .right1').animate({opacity: 0}, 400); }, 2700);
+					setTimeout(function() { $('.how-to-play-box .right2').animate({opacity: 0}, 400); }, 3200);
+					setTimeout(function() { $('.how-to-play-box .right3').animate({opacity: 0}, 400); }, 3800);
+				}
+			}
+		});
+	}
+	</script>
+</head>
+<body>
+	<div id="wrapper">
+
+		<div class="innerSwap" id="game-board">
+			
+			<div id="boardImage" class="abs" data-dims=",,980,,0,0">
+				<img class="playImage" src="assets/images/game-board2.svg" style="transform: scale(1) translateX(0.00001%) translateY(0.00001%) translateZ(1px);">
+
+				<div class="abs gameClick" data-game="1" data-dims=",,115,96,1019,765" data-zoom="33.84,32.84"></div>
+				<div class="abs gameClick" data-game="2" data-dims=",,115,96,1113,539" data-zoom="10.7,40.15"></div>
+				<div class="abs gameClick" data-game="3" data-dims=",,115,96,1075,326" data-zoom="-10.9,37.25"></div>
+				<div class="abs gameClick" data-game="4" data-dims=",,115,96,1074,132" data-zoom="-30.8,37.25"></div>
+
+				<div class="abs gameClick" data-game="5" data-dims=",,115,96,852,843" data-zoom="41.94,19.99"></div>
+				<div class="abs gameClick" data-game="6" data-dims=",,115,96,742,509" data-zoom="7.83,11.2"></div>
+				<div class="abs gameClick" data-game="7" data-dims=",,115,96,742,296" data-zoom="-13.96,11.2"></div>
+				<div class="abs gameClick" data-game="8" data-dims=",,115,96,824,136" data-zoom="-30.26,17.64"></div>
+
+				<div class="abs gameClick" data-game="9" data-dims=",,115,96,590,781" data-zoom="35.54,-0.61"></div>
+				<div class="abs gameClick" data-game="10" data-dims=",,115,96,630,53" data-zoom="-38.66,2.44"></div>
+				<div class="abs gameClick" data-game="11" data-dims=",,115,96,427,438" data-zoom="0.44,-13.41"></div>
+				<div class="abs gameClick" data-game="12" data-dims=",,115,96,346,45" data-zoom="-39.66,-19.51"></div>
+				<div class="abs gameClick" data-game="13" data-dims=",,115,96,197,654" data-zoom="22.54,-31.41"></div>
+				<div class="abs gameClick" data-game="14" data-dims=",,115,96,44,654" data-zoom="22.54,-43.51"></div>
+				<div class="abs gameClick" data-game="15" data-dims=",,115,96,131,363" data-zoom="-7.06,-36.51"></div>
+				
+				<div class="abs gameClick" data-game="16" data-dims=",,115,96,129,39" data-zoom="-40.16,-36.61"></div>
+				
+				<p class="absc center fill-x text-shadow text-center done-button" data-dims="100" data-font="120">
+					Scratch Now
+				</p>
+
+				<div id="scratchBox" class="absc center" data-dims=",,872,735,710">
+					<div id="scratchRevealer">
+						Panel 1
+					</div>
+					<canvas id="scratcher1" class="no-event"></canvas>
+				</div>
+				
+				<img src="assets/images/button-done.svg" class="absc center done-button" id="scratchDone" data-dims=",,512,140,198" data-event="unzoomBoard">
+				
+			</div>
+			
+			<p id="gametitle" class="gold-text absc center friz fill-x text-center" data-dims="92" data-font="90">Play for $500</p>
+			<div class="abs fill allwrap no-event">
+				<img src="assets/images/instant-scratch-its.png" class="abs" data-dims="0,0,172,122" style="margin:-16px -10px;">
+			</div>
+			<!-- <img src="assets/images/button-back.svg" class="abs" data-dims=",24,80,80,24" data-board-swap="#firstBoard"> -->
+		</div>
+
+		<div class="innerSwap" id="firstBoard">
+			<div class="abs fill no-event darken"></div>
+			<img src="assets/images/christmas-countdown-heading1.svg" class="abs center"  data-dims="30,,768">
+			<p class="friz abs center gold-text" data-dims="305,,768" data-font="79">HOW TO PLAY</p>
+			<div class="abs center how-to-play-box" data-dims="405,,704,356">
+				<div class="rotator">
+					<img src="assets/images/instructions1.png" alt="" />
+					<img src="assets/images/instructions-250.jpg" alt="" />
+					<img src="assets/images/instructions-500.jpg" alt="" />
+					<img src="assets/images/instructions-1000.jpg" alt="" />
+					<div class="instructions-scratch">
+						<img class="left left-symbol" src="assets/images/instructions-symbol.png" alt="" />
+						<img class="right right-symbol" src="assets/images/instructions-symbol.png" alt="" />
+						<img class="left left1" src="assets/images/instructions-panel-left1.png" alt="" />
+						<img class="left left2" src="assets/images/instructions-panel-left2.png" alt="" />
+						<img class="left left3" src="assets/images/instructions-panel-left3.png" alt="" />
+						<img class="right right1" src="assets/images/instructions-panel-right1.png" alt="" />
+						<img class="right right2" src="assets/images/instructions-panel-right2.png" alt="" />
+						<img class="right right3" src="assets/images/instructions-panel-right3.png" alt="" />
+					</div>
+				</div>
+				<img class="hand" src="assets/images/instructions-hand.png" alt="" />
+			</div>
+			<p class="abs center fill-x text-shadow slide-text-container" data-dims="790,,768" data-font="48">
+				<span class="slide-text">Tap & Scratch any 2 of the 16 panels and match 2 pictorial symbols to <span class="gold-text">win!</span></span>
+				<span class="slide-text">Three chances to win $250 daily!</span>
+				<span class="slide-text">Scratch eClub members get 5 extra chances to win <span class="gold-text">$500</span> daily!</span>
+				<span class="slide-text">Buy an Instant Scratch-Its $10 Christmas Countdown Ticket and get 5 chances to win <span class="gold-text">$1000</span> daily!</span>
+				<span class="slide-text">Play daily until 7th December 2014!</span>
+				
+			</p>
+			<p class="absc center fill-x text-shadow text-center" data-dims=",,768,,420" data-font="42">
+				You must be <span class="gold-text">18 years and over</span> to participate in this promotion.
+			</p>
+			<p class="friz absc center text-center" data-dims=",,900,,335" data-font="48">
+				Are you a <span class="gold-text">Scratch eClub</span> Member?
+			</p>
+			<img src="assets/images/button-yes.svg" class="abs" data-dims=",60,425,130,155" data-board-swap="#member-login">
+			<img src="assets/images/button-no.svg" class="abs" data-dims=",,425,130,155,60" data-board-swap="#non-member-login">
+			<p class="abs center fill-x" data-dims=",,800,,30" data-font="30" >
+				By clicking on the Yes or No button above, you agree to the <u data-board-swap="#termsBoard">Terms & Conditions</u> and <a href="https://tattsxmas.escratchie.com/" target="_blank">Privacy Policy</a> of this promotion.
+			</p>
+			<div class="abs fill allwrap no-event">
+				<img src="assets/images/instant-scratch-its.png" class="abs" data-dims="0,0,172,122" style="margin:-16px -10px;">
+			</div>
+			<!-- <img src="assets/images/button-back.svg" class="abs" data-dims=",35,80,80,35" data-board-swap="#enterSys"> -->
+		</div>
+		
+		<div class="innerSwap" id="enterSys">
+			<div class="abs fill no-event darken"></div>
+			
+			<div class="absc center inputWrap" data-dims="220,,840,122">
+				<p class="absc text-shadow white-text vcenter" data-dims=",10" data-font="45">Email </p>
+				<input type="text" data-font="55" name="email" autocomplete="off">
+			</div>
+			<div class="absc center inputWrap" data-dims="360,,840,122">
+				<p class="absc text-shadow white-text vcenter" data-dims=",10" data-font="45">SYS Code</p>
+				<input type="text" data-font="55" name="sys" style="width:70%;" autocomplete="off">
+			</div>
+			<div class="absc center inputWrap" data-dims="500,,410,122">
+				<p class="absc text-shadow white-text vcenter" data-dims=",10" data-font="45">Postcode</p>
+				<input type="text" data-font="55" name="postcode" style="width:40%;" maxlength="4" autocomplete="off">
+			</div>
+			
+			<p class="absc center text-shadow text-center" data-dims="850,,900" data-font="90">
+				Tap & Scratch any two panels per chance and match two pictorial symbols to win.
+			</p>
+
+			<p class="absc center text-center text-shadow text-center gold-text friz" data-dims="1050,,900" data-font="80">
+				Good Luck!
+			</p>
+
+			<img src="assets/images/button-play-for-1000.svg" class="absc center" data-event="enterGame" data-playfor="1000" data-dims="1250,,512" data-valid="email,postcode,sys">
+			
+			
+			
+
+			<div class="abs fill allwrap no-event">
+				<img src="assets/images/instant-scratch-its.png" class="abs" data-dims="0,0,172,122" style="margin:-16px -10px;">
+			</div>
+			<img src="assets/images/button-back.svg" class="abs" data-dims=",35,80,80,35" data-board-swap="goBack">
+		</div>
+
+		<div class="innerSwap" id="non-member-login">
+			<div class="abs fill no-event darken"></div>
+			
+			<div class="absc center inputWrap" data-dims="220,,840,122">
+				<p class="absc text-shadow white-text vcenter" data-dims=",10" data-font="45">First Name </p>
+				<input type="text" data-font="55" name="fname" style="width:70%;" autocomplete="off">
+			</div>
+			<div class="absc center inputWrap" data-dims="360,,840,122">
+				<p class="absc text-shadow white-text vcenter" data-dims=",10" data-font="45">Last Name </p>
+				<input type="text" data-font="55" name="lname" style="width:70%;" autocomplete="off">
+			</div>
+			<div class="absc center inputWrap" data-dims="500,,840,122">
+				<p class="absc text-shadow white-text vcenter" data-dims=",10" data-font="45">Email </p>
+				<input type="text" data-font="55" name="email" autocomplete="off">
+			</div>
+			<div class="absc center inputWrap" data-dims="640,,500,122">
+				<p class="absc text-shadow white-text vcenter" data-dims=",10" data-font="45">State </p>
+				<select data-font="55" style="width:60%;" name="state">
+					<option value="">Select</option>
+					<option value="qld">QLD</option>
+					<option value="nsw">NSW</option>
+					<option value="act">ACT</option>
+				</select>
+			</div>
+			
+			<p class="absc center text-shadow text-center" data-dims="830,,800" data-font="55">
+				Tap & Scratch any two panels per chance and match two pictorial symbols to win.
+			</p>
+			<img src="assets/images/button-play-for-250.svg" class="absc center" data-event="enterGame" data-playfor="250" data-dims="995,,512" data-valid="email,fname,lname">
+			
+			<p class="absc center text-shadow fill-x text-center" data-dims=",,900,,220" data-font="60">
+				At the end of the 3 chances you will have the option to enter a SYS code to <span class="gold-text">play for $1000</span>
+			</p>
+			
+
+			<div class="abs fill allwrap no-event">
+				<img src="assets/images/instant-scratch-its.png" class="abs" data-dims="0,0,172,122" style="margin:-16px -10px;">
+			</div>
+			<img src="assets/images/button-back.svg" class="abs" data-dims=",35,80,80,35" data-board-swap="goBack">
+		</div>
+
+		<div class="innerSwap" id="eclub-register">
+			<div class="abs fill no-event darken"></div>
+			<img src="assets/images/christmas-countdown-heading1.svg" class="abs center"  data-dims="30,,768">
+			<div class="abs fill allwrap no-event">
+				<img src="assets/images/instant-scratch-its.png" class="abs" data-dims="0,0,172,122" style="margin:-16px -10px;">
+			</div>
+			<img src="assets/images/button-back.svg" class="abs" data-dims=",35,80,80,35" data-board-swap="goBack">
+		</div>
+
+		<div class="innerSwap" id="termsBoard">
+			<div class="abs fill no-event darken"></div>
+
+			<p class="absc center text-center text-shadow text-center gold-text friz" data-dims="60,,900" data-font="60">
+				Terms & Conditions
+			</p>
+			<p class="absc center" data-dims="750,,900,1200" data-font="40" id="termsQLD" style="overflow: scroll; display: none;"></p>
+
+			<p class="absc center" data-dims="750,,900,1200" data-font="40" id="termsNSW" style="overflow: scroll;"></p>
+
+			<p class="absc center text-center text-shadow text-center gold-text friz terms-swap" data-dims=",,,,70,500" data-font="60" data-event="termsNSW">
+				NSW/ACT
+			</p>			
+			
+			<p class="absc center text-center text-shadow text-center friz terms-swap" data-dims=",,,,70,200" data-font="60" data-event="termsQLD">
+				QLD
+			</p>
+
+			<div class="abs fill allwrap no-event">
+				<img src="assets/images/instant-scratch-its.png" class="abs" data-dims="0,0,172,122" style="margin:-16px -10px;">
+			</div>
+			<img src="assets/images/button-back.svg" class="abs" data-dims=",35,80,80,35" data-board-swap="goBack">
+		</div>
+	
+		<div class="innerSwap" id="member-play">
+
+			<div class="abs fill no-event darken"></div>
+			<p class="friz absc center text-shadow text-center fill-x" data-dims="160,,900" data-font="60">
+				As a Scratch eClub<br> Member you are entitled to play both games in any order.
+			</p>
+			<p class="absc center text-center text-shadow text-center gold-text friz" data-dims="310,,900" data-font="80">
+				Good Luck!
+			</p>
+
+			<p class="absc center text-shadow text-center" data-dims="415,,900" data-font="70">
+				<span class="gold-text">3 chances</span> to win
+			</p>
+			<img src="assets/images/button-play-for-250.svg" class="absc center" data-event="enterGame" data-playfor="250"  data-dims="535,,512">
+
+			<p class="absc center text-shadow text-center" data-dims="660,,900" data-font="70">
+				<span class="gold-text">5 chances</span> to win
+			</p>
+			<img src="assets/images/button-play-for-500.svg" class="absc center" data-event="enterGame" data-playfor="500" data-dims="770,,512">
+			
+			<!--<hr class="absc center"  data-dims=",,855,,625">-->
+			
+			<p class="absc center text-shadow fill-x text-center" data-dims=",,900,,445" data-font="75">
+				Or buy an instant Scratch-Its $10 Christmas Countdown Ticket
+			</p>
+			<p class="absc center text-shadow text-center" data-dims=",,900,,300" data-font="70">
+				& play for <span class="gold-text"><b>$1000!</b></span>
+			</p>
+
+			<img src="assets/images/button-enter-sys-code.svg" class="absc center" data-board-swap="#enterSys" data-dims=",,512,,150">
+
+			<div class="abs fill allwrap no-event">
+				<img src="assets/images/instant-scratch-its.png" class="abs" data-dims="0,0,172,122" style="margin:-16px -10px;">
+			</div>
+			<img src="assets/images/button-back.svg" class="abs" data-dims=",35,80,80,35" data-board-swap="goBack">
+		</div>
+
+		<div class="innerSwap" id="member-login">
+			<div class="abs fill no-event darken"></div>
+			<p class="friz abs center text-shadow fill-x" data-dims="60,,900" data-font="100">
+				Welcome
+			</p>
+			<p class="friz abs center text-shadow fill-x" data-dims="170,,900" data-font="70">
+				<span class="gold-text">Scratch eClub</span> Member
+			</p>
+			<p class="absc center text-shadow fill-x text-center" data-dims="300" data-font="50">
+				Scratch eClub Login Email
+			</p>
+			<div class="absc center inputWrap" data-dims="420,,840,122">
+				<p class="absc text-shadow white-text vcenter" data-dims=",10" data-font="45">Email </p>
+				<input type="text" data-font="55" name="email" autocomplete="off">
+			</div>
+			<div class="absc center inputWrap" data-dims="560,,500,122">
+				<p class="absc text-shadow white-text vcenter" data-dims=",10" data-font="45">State </p>
+				<select data-font="55" style="width:60%;" name="state">
+					<option value="">Select</option>
+					<option value="qld">QLD</option>
+					<option value="nsw">NSW</option>
+					<option value="act">ACT</option>
+				</select>
+			</div>
+
+			<img src="assets/images/button-play-now.svg" class="absc center" data-event="memberLogin" data-dims="750,,512" data-valid="email">
+			
+			<hr class="absc center"  data-dims="820,,855,,">
+			
+			<p class="absc center text-shadow fill-x text-center" data-dims=",,900,,445" data-font="75">
+				Or buy an instant Scratch-Its $10 Christmas Countdown Ticket
+			</p>
+			<p class="absc center text-shadow text-center" data-dims=",,900,,300" data-font="70">
+				& play for <span class="gold-text">$1000!</span>
+			</p>
+
+			<img src="assets/images/button-enter-sys-code.svg" class="absc center" data-valid="email,state" data-board-swap="#enterSys" data-dims=",,512,,150">
+
+			<div class="abs fill allwrap no-event">
+				<img src="assets/images/instant-scratch-its.png" class="abs" data-dims="0,0,172,122" style="margin:-16px -10px;">
+			</div>
+			<img src="assets/images/button-back.svg" class="abs" data-dims=",35,80,80,35" data-board-swap="goBack">
+		</div>
+
+		<div class="innerSwap" id="winBoard">
+			<div class="abs fill no-event darken"></div>
+			<img src="assets/images/fireworks.png" class="abs center fill-x" data-dims="0">
+			<p class="friz absc center gold-text text-center" data-dims="580,,900" data-font="100">Congratulations</p>
+			<p class="absc center fill-x text-center" data-dims="790,,800" data-font="78">
+				You have matched 2 symbols.
+			</p>
+			<img src="assets/images/button-claim-prize.svg" class="absc center" data-playfor="250" data-board-swap="#claimPrize" data-dims="1030,,512">
+			<div class="abs fill allwrap no-event">
+				<img src="assets/images/instant-scratch-its.png" class="abs" data-dims="0,0,172,122" style="margin:-16px -10px;">
+			</div>
+		</div>
+
+		<div class="innerSwap" id="lossBoard">
+			<div class="abs fill no-event darken"></div>
+			<p class="friz absc center gold-text text-center" data-dims="580,,900" data-font="100">You didn't match</p>
+			<p class="absc center fill-x text-center" data-dims="790,,800" data-font="78">
+				any pictorial symbols correctly
+			</p>
+			<p class="absc center fill-x text-center" data-dims="920,,800" data-font="45">
+				You have <span class="plays_remain">0</span> chances remaining today.
+			</p>
+			<img src="assets/images/button-next.svg" class="absc center" data-playfor="250" data-dims="1130,,512" data-board-swap="#joinBoard">
+			<div class="abs fill allwrap no-event">
+				<img src="assets/images/instant-scratch-its.png" class="abs" data-dims="0,0,172,122" style="margin:-16px -10px;">
+			</div>
+		</div>
+		
+		<div class="innerSwap" id="tryAgain">
+			<div class="abs fill no-event darken"></div>
+			<p class="friz absc center gold-text text-center" data-dims="580,,900" data-font="100">You didn't match</p>
+			<p class="absc center fill-x text-center" data-dims="790,,800" data-font="78">
+				any pictorial symbols correctly
+			</p>
+			<p class="absc center fill-x text-center" data-dims="920,,800" data-font="45">
+				You have <span class="plays_remain">0</span> chances remaining today.
+			</p>
+			<img src="assets/images/button-try-again.svg" class="absc center" data-playfor="250" data-dims="1130,,512" data-event="enterGame">
+			<div class="abs fill allwrap no-event">
+				<img src="assets/images/instant-scratch-its.png" class="abs" data-dims="0,0,172,122" style="margin:-16px -10px;">
+			</div>
+		</div>
+
+		<div class="innerSwap" id="joinBoard">
+			<div class="abs fill no-event darken"></div>
+			
+			<p class="absc center text-shadow fill-x text-center friz gold-text" data-dims="230,,900" data-font="80">
+				Want 5 more chances today?
+			</p>
+			<p class="absc center text-shadow fill-x text-center" data-dims="430,,800" data-font="70">
+				Join Scratch eClub & play for $500 daily!
+			</p>
+
+			<img src="assets/images/button-join-now.svg" class="absc center" data-board-swap="#joinBoard1" data-dims="645,,512">
+			
+			<hr class="absc center"  data-dims="820,,855,,">
+			
+			<p class="absc center text-shadow fill-x text-center" data-dims=",,900,,445" data-font="75">
+				If you have an Instant Scratch-Its $10 Christmas Countdown Ticket
+			</p>
+
+			<img src="assets/images/button-play-for-1000.svg" class="absc center" data-board-swap="#enterSys" data-dims=",,512,,245">
+
+			<p class="absc center text-shadow text-center" data-dims=",,900,,115" data-font="45">
+				and play for a prize of <span class="gold-text">$1000!</span>
+			</p>
+
+			<div class="abs fill allwrap no-event">
+				<img src="assets/images/instant-scratch-its.png" class="abs" data-dims="0,0,172,122" style="margin:-16px -10px;">
+			</div>
+			<img src="assets/images/button-back.svg" class="abs" data-dims=",35,80,80,35" data-board-swap="goBack">
+		</div>
+
+
+		<div class="innerSwap" id="joinBoard1">
+			<div class="abs fill no-event darken"></div>
+
+			<img src="assets/images/christmas-countdown-heading1.svg" class="abs center"  data-dims="30,,768">
+			<!-- 420 -->
+
+			<div class="abs inputWrap" data-dims="360,70,200,122">
+				<select data-font="55" style="width:90%;" name="title">
+					<option value="Mr">Mr.</option>
+					<option value="Ms">Ms.</option>
+					<option value="Mrs">Mrs.</option>
+				</select>
+			</div>
+
+			<div class="abs inputWrap" data-dims="360,,620,122,,70">
+				<p class="absc text-shadow white-text vcenter" data-dims=",10" data-font="45">First Name </p>
+				<input type="text" data-font="55" name="fname" style="width:60%;" autocomplete="off">
+			</div>
+		
+			<div class="absc center inputWrap" data-dims="560,,840,122">
+				<p class="absc text-shadow white-text vcenter" data-dims=",10" data-font="45">Last Name </p>
+				<input type="text" data-font="55" name="lname" style="width:70%;" autocomplete="off">
+			</div>
+
+			<div class="absc center inputWrap" data-dims="700,,840,122">
+				<p class="absc text-shadow white-text vcenter" data-dims=",10" data-font="45">Date Of Birth </p>
+				<select data-font="50" style="width:15.5%; right:40%; background-size: 70%; " name="dob_day">
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+					<option value="24">24</option>
+					<option value="25">25</option>
+					<option value="26">26</option>
+					<option value="27">27</option>
+					<option value="28">28</option>
+					<option value="29">29</option>
+					<option value="30">30</option>
+					<option value="31">31</option>
+
+				</select>
+				<select data-font="50" style="width:15.5%; right:25%; background-size: 70%;" name="dob_month">
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+				</select>
+				<select data-font="50" style="width:25%; background-size: 50%;" name="dob_year">
+					<option value="1921">1921</option>
+					<option value="1922">1922</option>
+					<option value="1923">1923</option>
+					<option value="1924">1924</option>
+					<option value="1925">1925</option>
+					<option value="1926">1926</option>
+					<option value="1927">1927</option>
+					<option value="1928">1928</option>
+					<option value="1929">1929</option>
+					<option value="1930">1930</option>
+					<option value="1931">1931</option>
+					<option value="1932">1932</option>
+					<option value="1933">1933</option>
+					<option value="1934">1934</option>
+					<option value="1935">1935</option>
+					<option value="1936">1936</option>
+					<option value="1937">1937</option>
+					<option value="1938">1938</option>
+					<option value="1939">1939</option>
+					<option value="1940">1940</option>
+					<option value="1941">1941</option>
+					<option value="1942">1942</option>
+					<option value="1943">1943</option>
+					<option value="1944">1944</option>
+					<option value="1945">1945</option>
+					<option value="1946">1946</option>
+					<option value="1947">1947</option>
+					<option value="1948">1948</option>
+					<option value="1949">1949</option>
+					<option value="1950">1950</option>
+					<option value="1951">1951</option>
+					<option value="1952">1952</option>
+					<option value="1953">1953</option>
+					<option value="1954">1954</option>
+					<option value="1955">1955</option>
+					<option value="1956">1956</option>
+					<option value="1957">1957</option>
+					<option value="1958">1958</option>
+					<option value="1959">1959</option>
+					<option value="1960">1960</option>
+					<option value="1961">1961</option>
+					<option value="1962">1962</option>
+					<option value="1963">1963</option>
+					<option value="1964">1964</option>
+					<option value="1965">1965</option>
+					<option value="1966">1966</option>
+					<option value="1967">1967</option>
+					<option value="1968">1968</option>
+					<option value="1969">1969</option>
+					<option value="1970">1970</option>
+					<option value="1971">1971</option>
+					<option value="1972">1972</option>
+					<option value="1973">1973</option>
+					<option value="1974">1974</option>
+					<option value="1975">1975</option>
+					<option value="1976">1976</option>
+					<option value="1977">1977</option>
+					<option value="1978">1978</option>
+					<option value="1979">1979</option>
+					<option value="1980">1980</option>
+					<option value="1981" selected="">1981</option>
+					<option value="1982">1982</option>
+					<option value="1983">1983</option>
+					<option value="1984">1984</option>
+					<option value="1985">1985</option>
+					<option value="1986">1986</option>
+					<option value="1987">1987</option>
+					<option value="1988">1988</option>
+					<option value="1989">1989</option>
+					<option value="1990">1990</option>
+					<option value="1991">1991</option>
+					<option value="1992">1992</option>
+					<option value="1993">1993</option>
+					<option value="1994">1994</option>
+					<option value="1995">1995</option>
+					<option value="1996">1996</option>
+					<option value="1997">1997</option>
+				</select>
+			</div>
+			<p class="absc center text-center" data-font="30" data-dims="800,,620">
+				You must be 18 or over to register
+			</p>
+			<div class="absc center inputWrap" data-dims="890,,840,122">
+				<p class="absc text-shadow white-text vcenter" data-dims=",10" data-font="45">Email </p>
+				<input type="email" data-font="55" name="email" autocomplete="off">
+			</div>
+
+			<div class="absc center inputWrap" data-dims="1030,,840,122">
+				<p class="absc text-shadow white-text vcenter" data-dims=",10" data-font="45">Password </p>
+				<input type="text" data-font="55" name="password" style="width:70%;" autocomplete="off">
+			</div>
+
+			
+
+			<img src="assets/images/button-next.svg" class="absc center" data-dims="1280,,512" data-valid="fname,lname,email,age,password" data-board-swap="#joinBoard2">
+
+			<div class="abs fill allwrap no-event">
+				<img src="assets/images/instant-scratch-its.png" class="abs" data-dims="0,0,172,122" style="margin:-16px -10px;">
+			</div>
+			<img src="assets/images/button-back.svg" class="abs" data-dims=",35,80,80,35" data-board-swap="goBack">
+		</div>
+	
+		<div class="innerSwap" id="joinBoard2">
+			<div class="abs fill no-event darken"></div>
+
+			<img src="assets/images/christmas-countdown-heading1.svg" class="abs center"  data-dims="30,,768">
+
+			<div class="absc center inputWrap" data-dims="420,,840,122">
+				<p class="absc text-shadow white-text vcenter" data-dims=",10" data-font="45">Address </p>
+				<input type="text" data-font="55" name="address1"  style="width:70%;" autocomplete="off">
+			</div>
+
+			<div class="absc center inputWrap" data-dims="560,,840,122">
+				<p class="absc text-shadow white-text vcenter" data-dims=",10" data-font="45">Address 2 </p>
+				<input type="text" data-font="55" name="address2" style="width:70%;" autocomplete="off">
+			</div>
+			
+			<div class="absc center inputWrap" data-dims="700,,840,122">
+				<p class="absc text-shadow white-text vcenter" data-dims=",10" data-font="45">City/Town</p>
+				<input type="text" data-font="55" name="city" style="width:70%;" autocomplete="off">
+			</div>
+
+			<div class="absc center inputWrap" data-dims="840,274,410,122">
+				<p class="absc text-shadow white-text vcenter" data-dims=",10" data-font="45">State </p>
+				<select data-font="55" style="width:60%;" name="state">
+					<option value="">Select</option>
+					<option value="qld">QLD</option>
+					<option value="nsw">NSW</option>
+					<option value="act">ACT</option>
+				</select>
+			</div>
+
+			<div class="absc center inputWrap" data-dims="840,,410,122,,274">
+				<p class="absc text-shadow white-text vcenter" data-dims=",10" data-font="45">Postcode</p>
+				<input type="text" data-font="55" name="postcode" style="width:40%;" maxlength="4" autocomplete="off">
+			</div>
+			
+			<div class="absc center inputWrap" data-dims="980,130,122,122">
+				<input type="checkbox" class="textScaler" name="optin" autocomplete="off">
+			</div>
+
+			<p class="absc" data-font="35" data-dims="980,560,640">
+				I agree to the terms and conditions.
+			</p>
+		
+			<img src="assets/images/button-play-now.svg" class="absc center" data-dims="1250,,512" data-valid="name,email,age,postcode" data-event="tattsJoin">
+
+			<div class="abs fill allwrap no-event">
+				<img src="assets/images/instant-scratch-its.png" class="abs" data-dims="0,0,172,122" style="margin:-16px -10px;">
+			</div>
+			<img src="assets/images/button-back.svg" class="abs" data-dims=",35,80,80,35" data-board-swap="goBack">
+		</div>
+
+
+		<div class="innerSwap" id="claimPrize">
+			<div class="abs fill no-event darken"></div>
+			<img src="assets/images/christmas-countdown-heading1.svg" class="abs center"  data-dims="30,,768">
+
+			<div class="absc center inputWrap" data-dims="420,,840,122">
+				<p class="absc text-shadow white-text vcenter" data-dims=",10" data-font="45">First Name </p>
+				<input type="text" data-font="55" name="fname" style="width:70%;" autocomplete="off">
+			</div>
+
+			<div class="absc center inputWrap" data-dims="560,,840,122">
+				<p class="absc text-shadow white-text vcenter" data-dims=",10" data-font="45">Date Of Birth </p>
+				<select data-font="50" style="width:15.5%; right:40%; background-size: 70%; " name="dob_day">
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+					<option value="24">24</option>
+					<option value="25">25</option>
+					<option value="26">26</option>
+					<option value="27">27</option>
+					<option value="28">28</option>
+					<option value="29">29</option>
+					<option value="30">30</option>
+					<option value="31">31</option>
+
+				</select>
+				<select data-font="50" style="width:15.5%; right:25%; background-size: 70%;" name="dob_month">
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+				</select>
+				<select data-font="50" style="width:25%; background-size: 50%;" name="dob_year">
+					<option value="1921">1921</option>
+					<option value="1922">1922</option>
+					<option value="1923">1923</option>
+					<option value="1924">1924</option>
+					<option value="1925">1925</option>
+					<option value="1926">1926</option>
+					<option value="1927">1927</option>
+					<option value="1928">1928</option>
+					<option value="1929">1929</option>
+					<option value="1930">1930</option>
+					<option value="1931">1931</option>
+					<option value="1932">1932</option>
+					<option value="1933">1933</option>
+					<option value="1934">1934</option>
+					<option value="1935">1935</option>
+					<option value="1936">1936</option>
+					<option value="1937">1937</option>
+					<option value="1938">1938</option>
+					<option value="1939">1939</option>
+					<option value="1940">1940</option>
+					<option value="1941">1941</option>
+					<option value="1942">1942</option>
+					<option value="1943">1943</option>
+					<option value="1944">1944</option>
+					<option value="1945">1945</option>
+					<option value="1946">1946</option>
+					<option value="1947">1947</option>
+					<option value="1948">1948</option>
+					<option value="1949">1949</option>
+					<option value="1950">1950</option>
+					<option value="1951">1951</option>
+					<option value="1952">1952</option>
+					<option value="1953">1953</option>
+					<option value="1954">1954</option>
+					<option value="1955">1955</option>
+					<option value="1956">1956</option>
+					<option value="1957">1957</option>
+					<option value="1958">1958</option>
+					<option value="1959">1959</option>
+					<option value="1960">1960</option>
+					<option value="1961">1961</option>
+					<option value="1962">1962</option>
+					<option value="1963">1963</option>
+					<option value="1964">1964</option>
+					<option value="1965">1965</option>
+					<option value="1966">1966</option>
+					<option value="1967">1967</option>
+					<option value="1968">1968</option>
+					<option value="1969">1969</option>
+					<option value="1970">1970</option>
+					<option value="1971">1971</option>
+					<option value="1972">1972</option>
+					<option value="1973">1973</option>
+					<option value="1974">1974</option>
+					<option value="1975">1975</option>
+					<option value="1976">1976</option>
+					<option value="1977">1977</option>
+					<option value="1978">1978</option>
+					<option value="1979">1979</option>
+					<option value="1980">1980</option>
+					<option value="1981" selected="">1981</option>
+					<option value="1982">1982</option>
+					<option value="1983">1983</option>
+					<option value="1984">1984</option>
+					<option value="1985">1985</option>
+					<option value="1986">1986</option>
+					<option value="1987">1987</option>
+					<option value="1988">1988</option>
+					<option value="1989">1989</option>
+					<option value="1990">1990</option>
+					<option value="1991">1991</option>
+					<option value="1992">1992</option>
+					<option value="1993">1993</option>
+					<option value="1994">1994</option>
+					<option value="1995">1995</option>
+					<option value="1996">1996</option>
+					<option value="1997">1997</option>
+				</select>
+			</div>
+
+			<p class="abs center fill-x" data-dims="635" data-font="30">
+				You must be 18 or over to register
+			</p>
+
+			<div class="absc center inputWrap" data-dims="840,,840,122">
+				<p class="absc text-shadow white-text vcenter" data-dims=",10" data-font="45">Email </p>
+				<input type="email" data-font="55" name="email" autocomplete="off">
+			</div>
+
+			<div class="absc center inputWrap" data-dims="980,,840,122">
+				<p class="absc text-shadow white-text vcenter" data-dims=",10" data-font="45">Mobile </p>
+				<input type="text" data-font="55" name="mobile" maxlength="10" autocomplete="off">
+			</div>
+
+			<div class="abs fill allwrap no-event">
+				<img src="assets/images/instant-scratch-its.png" class="abs" data-dims="0,0,172,122" style="margin:-16px -10px;">
+			</div>
+
+			<img src="assets/images/button-claim-now.svg" class="absc center" data-dims=",,500,,280" data-valid="email,fname,lname,mobile" data-event="claimWin">
+		</div>
+	</div>
+	
+	<div id="landscape"></div>
+	<div id="preload">
+		<img src="assets/images/game-board2.svg">
+		<img src="assets/images/symbols/angel.svg">
+		<img src="assets/images/symbols/cdycane.svg">
+		<img src="assets/images/symbols/grbrman.svg">
+		<img src="assets/images/symbols/wreath.svg">
+		<img src="assets/images/symbols/bell.svg">
+		<img src="assets/images/symbols/deer.svg">
+		<img src="assets/images/symbols/holly.svg">
+		<img src="assets/images/symbols/tree.svg">
+		<img src="assets/images/symbols/candle.svg">
+		<img src="assets/images/symbols/elf.svg">
+		<img src="assets/images/symbols/santa.svg">
+		<img src="assets/images/symbols/turkey.svg">
+		<img src="assets/images/symbols/card.svg">
+		<img src="assets/images/symbols/gift.svg">
+		<img src="assets/images/symbols/sleigh.svg">
+		<img src="assets/images/symbols/wishbone.svg">
+		<img src="assets/images/panels/Panel_1.svg">
+		<img src="assets/images/panels/Panel_13.svg">
+		<img src="assets/images/panels/Panel_2.svg">
+		<img src="assets/images/panels/Panel_6.svg">
+		<img src="assets/images/panels/Panel_10.svg">
+		<img src="assets/images/panels/Panel_14.svg">
+		<img src="assets/images/panels/Panel_3.svg">
+		<img src="assets/images/panels/Panel_7.svg">
+		<img src="assets/images/panels/Panel_11.svg">
+		<img src="assets/images/panels/Panel_15.svg">
+		<img src="assets/images/panels/Panel_4.svg">
+		<img src="assets/images/panels/Panel_8.svg">
+		<img src="assets/images/panels/Panel_12.svg">
+		<img src="assets/images/panels/Panel_16.svg">
+		<img src="assets/images/panels/Panel_5.svg">
+		<img src="assets/images/panels/Panel_9.svg">
+		<img src="assets/images/landscape.png">
+	</div>
+</body>
+
+</html>

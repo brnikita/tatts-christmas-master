@@ -1,0 +1,41 @@
+@font-face {
+  font-family: 'Friz';
+  src: url('FrizQuadrataCom-Bold.woff') format('woff'),
+       url('FrizQuadrataCom-Bold.ttf')  format('truetype');
+  font-style:   normal;
+  font-weight:  700;
+}
+
+@font-face {
+  font-family: 'HelveticaNeueLTbold';
+  src: url('HelveticaNeueLTPro-BdCn.woff') format('woff'),
+       url('HelveticaNeueLTPro-BdCn.ttf')  format('truetype');
+       
+  font-style:   normal;
+  font-weight:  bold;
+}
+
+@font-face {
+  font-family: 'HelveticaNeueLTboldo';
+  src: url('HelveticaNeueLTPro-BdCnO.woff') format('woff'),
+       url('HelveticaNeueLTPro-BdCnO.ttf')  format('truetype');
+  font-style:   oblique;
+  font-weight:  bold;
+}
+
+@font-face {
+  font-family: 'HelveticaNeueLT';
+  src: url('HelveticaNeueLTPro-MdCn.woff') format('woff'),
+       url('HelveticaNeueLTPro-MdCn.ttf')  format('truetype');
+  font-style:   normal;
+  font-weight:  400;
+}
+
+@font-face {
+  font-family: 'HelveticaNeueLTo';
+  src: url('HelveticaNeueLTPro-MdCnO.woff') format('woff'),
+       url('HelveticaNeueLTPro-MdCnO.ttf')  format('truetype');
+  font-style:   oblique;
+  font-weight:  400;
+}
+
