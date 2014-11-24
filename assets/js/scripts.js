@@ -173,12 +173,12 @@
         console.log('uiloaded');
         IntroAnimation();
 
-        //$.get('termsNSW.html', function (d) {
-        //    $('#termsNSW').html(d);
-        //});
-        //$.get('termsQLD.html', function (d) {
-        //    $('#termsQLD').html(d);
-        //});
+        $.get('termsNSW.html', function (d) {
+            $('#termsNSW').html(d);
+        });
+        $.get('termsQLD.html', function (d) {
+            $('#termsQLD').html(d);
+        });
 
         if (localStorage.getItem('_playerObject_') !== null) {
             playerObject = JSON.parse(localStorage.getItem('_playerObject_'));
@@ -308,23 +308,33 @@
     });
 
     ui.events.on('termsNSW', function (event, element) {
-        $('#termsNSW').hide();
+        var $termsNSW = $('#termsNSW');
+
+        $termsNSW.hide();
         $('#termsQLD').hide();
-        $('#termsNSW').show(); //here
+        $termsNSW.show();
 
         $('.terms-swap').removeClass('gold-text');
         $(element.element).addClass('gold-text');
     });
 
     ui.events.on('termsQLD', function (event, element) {
+        var $termsQLD = $('#termsQLD');
         $('#termsNSW').hide();
-        $('#termsQLD').hide();
-        $('#termsQLD').show(); //here
+        $termsQLD.hide();
+        $termsQLD.show();
 
         $('.terms-swap').removeClass('gold-text');
         $(element.element).addClass('gold-text');
     });
 
+    /**
+     * Function starts intro
+     *
+     * @function
+     * @name IntroAnimation
+     * @returns {undefined}
+     */
     function IntroAnimation() {
         var $howToPlayBox = $('.how-to-play-box .hand');
 
@@ -339,7 +349,7 @@
                 }
             },
             before: function (currSlideElement, nextSlideElement, options) {
-                if ($('.slide-text:visible').length == 0) {
+                if ($('.slide-text:visible').length === 0) {
                     $('.slide-text').eq(0).fadeIn();
                 } else {
                     var nextSlide = options.nextSlide;
@@ -347,7 +357,7 @@
                         $('.slide-text').eq(nextSlide).fadeIn();
                     });
                 }
-                if (options.nextSlide == 4) {
+                if (options.nextSlide === 4) {
                     $('.how-to-play-box .hand').css({
                         left: '-5%',
                         bottom: '-19%',
@@ -357,6 +367,10 @@
                 }
             },
             after: function (currSlideElement, nextSlideElement, options) {
+                var $playBoxLeft1 = $('.how-to-play-box .left1'),
+                    $playBoxLeft2 = $('.how-to-play-box .left2'),
+                    $playBoxLeft3 = $('.how-to-play-box .left3');
+
                 if (options.currSlide == 4) {
                     //hand movement
                     setTimeout(function () {
@@ -395,22 +409,22 @@
 
                     //scratch off boxes
                     setTimeout(function () {
-                        $('.how-to-play-box .left1').animate({opacity: 0}, 400);
+                        $playBoxLeft1.animate({opacity: 0}, 400);
                     }, 500);
                     setTimeout(function () {
-                        $('.how-to-play-box .left2').animate({opacity: 0}, 400);
+                        $playBoxLeft2.animate({opacity: 0}, 400);
                     }, 1000);
                     setTimeout(function () {
-                        $('.how-to-play-box .left3').animate({opacity: 0}, 400);
+                        $playBoxLeft3.animate({opacity: 0}, 400);
                     }, 1600);
                     setTimeout(function () {
-                        $('.how-to-play-box .right1').animate({opacity: 0}, 400);
+                        $playBoxLeft1.animate({opacity: 0}, 400);
                     }, 2700);
                     setTimeout(function () {
-                        $('.how-to-play-box .right2').animate({opacity: 0}, 400);
+                        $playBoxLeft2.animate({opacity: 0}, 400);
                     }, 3200);
                     setTimeout(function () {
-                        $('.how-to-play-box .right3').animate({opacity: 0}, 400);
+                        $playBoxLeft3.animate({opacity: 0}, 400);
                     }, 3800);
                 }
             }
