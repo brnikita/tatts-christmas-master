@@ -278,7 +278,7 @@
             }, time);
         },
         showLoad: function (bool) {
-            if (bool == true) {
+            if (bool === true) {
                 $wrapper.addClass('dim').css('opacity', 0.5);
                 console.log('added dim');
             } else {
