@@ -126,44 +126,62 @@
         });
 
         buildScratcher('#scratcher1', 'assets/images/panels/Panel_' + game + '.svg', '200', '#scratchRevealer',
-            function () {
-                var $scratchDone = $('#scratchDone');
-
-                $('#scratchRevealer').css({'background-image': 'none'});
-                $.post(config.api.scratch, {
-                    panel: game,
-                    gametype: gameType,
-                    playerObject: playerObject,
-                    screenid: ui.currentBoard
-                }, function (data) {
-                    if (data.message !== null) {
-                        alert(data.message);
-                    }
-
-                    playsRemain = data.plays_remain;
-                    $('.plays_remain').text(playsRemain);
-                    $scratchDone.removeAttr('data-board-swap').attr('data-event', 'unzoomBoard');
-
-                    if (data.game_state === true) {
-                        $scratchDone.attr('data-board-swap', '#winBoard');
-                    }
-
-                    if ((data.game_state === false) && (parseInt(playsRemain) === 0)) {
-                        $scratchDone.attr('data-board-swap', '#lossBoard');
-                    }
-
-                    if ((data.game_state === false) && (parseInt(playsRemain) !== 0)) {
-                        $('#tryAgain').find('[data-event="enterGame"]').attr('data-playfor', gameType);
-                        $scratchDone.attr('data-board-swap', '#tryAgain');
-                    }
-
-                    $('#scratchRevealer').css({'background-image': 'url(' + data.reveal + ')'});
-                    $('.gameClick[data-game="' + game + '"]')
-                        .css({'background-image': 'url(' + data.reveal + ')'})
-                        .attr('data-revealed', 'true');
-                }, 'json');
-            }
+            buildScratcherHandle
         );
+    }
+
+    /**
+     * Handler of user scratch event
+     *
+     * @function
+     * @name buildScratcherHandle
+     * @returns {undefined}
+     */
+    function buildScratcherHandle() {
+        $('#scratchRevealer').css({'background-image': 'none'});
+        $.post(config.api.scratch, {
+            panel: game,
+            gametype: gameType,
+            playerObject: playerObject,
+            screenid: ui.currentBoard
+        }, scratchRequestHandler, 'json');
+    }
+
+    /**
+     * Function sends request to the server after user has scratched game panel
+     *
+     * @function
+     * @name scratchRequestHandler
+     * @param {Object} data
+     */
+    function scratchRequestHandler(data) {
+        var $scratchDone = $('#scratchDone');
+
+        if (data.message !== null) {
+            alert(data.message);
+        }
+
+        playsRemain = data.plays_remain;
+        $('.plays_remain').text(playsRemain);
+        $scratchDone.removeAttr('data-board-swap').attr('data-event', 'unzoomBoard');
+
+        if (data.game_state === true) {
+            $scratchDone.attr('data-board-swap', '#winBoard');
+        }
+
+        if ((data.game_state === false) && (parseInt(playsRemain) === 0)) {
+            $scratchDone.attr('data-board-swap', '#lossBoard');
+        }
+
+        if ((data.game_state === false) && (parseInt(playsRemain) !== 0)) {
+            $('#tryAgain').find('[data-event="enterGame"]').attr('data-playfor', gameType);
+            $scratchDone.attr('data-board-swap', '#tryAgain');
+        }
+
+        $('#scratchRevealer').css({'background-image': 'url(' + data.reveal + ')'});
+        $('.gameClick[data-game="' + game + '"]')
+            .css({'background-image': 'url(' + data.reveal + ')'})
+            .attr('data-revealed', 'true');
     }
 
     /**
